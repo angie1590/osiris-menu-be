@@ -205,3 +205,26 @@ Contratos formales (schemas Pydantic, eventos WS) son la **interfaz pública del
 - **Reserva teórica / Consumo confirmado**: modelo híbrido de inventario (D-01). Reserva al Enviado, consumo al pasar a En preparación.
 
 Glosario extendido: `specs/00-base/glossary.md`.
+
+## Nota sobre el entorno virtual
+
+Por un comportamiento específico de macOS y de cómo Python procesa archivos `.pth`
+cuando el directorio padre está marcado como `hidden`, este proyecto usa la
+convención:
+
+- `venv/` es la carpeta real del entorno virtual.
+- `.venv` es un symlink hacia `venv/`.
+
+Esto preserva la convención `.venv` que asumen las herramientas (uv, IDEs)
+mientras evita el bug del `ModuleNotFoundError` en macOS con layout `src/`.
+
+Para regenerar el entorno desde cero:
+
+```bash
+rm -rf venv .venv uv.lock
+uv venv venv             # crea venv/ explícitamente
+ln -s venv .venv         # crea el symlink
+uv sync                  # instala dependencias y el paquete editable
+```
+
+Ambas carpetas están ignoradas por git (`venv/` y `.venv/`).
