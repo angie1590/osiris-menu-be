@@ -1,230 +1,371 @@
-# Asiringui · osiris-menu-be
+CLAUDE.md · osiris-menu-be
 
-Sistema operativo integral del restaurante-cervecería Asiringui, en Cuenca, Ecuador. Este repo contiene el **backend** del sistema. El frontend vive en el repo `osiris-menu-fe`.
+Guía principal para construir osiris-menu con OpenSpec.
 
-## Qué construye este repo
+Este repositorio contiene el backend y el OpenSpec canónico del proyecto completo. El frontend vive en el repo hermano osiris-menu-fe, pero se construye simultáneamente desde este mismo OpenSpec.
 
-API y backend de un sistema POS / gestión integral para un restaurante de aproximadamente 60 plazas, con cumplimiento fiscal SRI Ecuador, cumplimiento LOPDP, operación offline-resiliente, y soporte de hasta 5 operadores concurrentes.
+Regla principal
 
-Apertura prevista del restaurante: tercer trimestre de 2026.
+Antes de implementar cualquier cambio funcional, leer primero:
 
-## Stack obligatorio
+openspec/project.md
+openspec/decisions.md
+openspec/glossary.md
+openspec/reference-specs/
 
-- **Lenguaje**: Python 3.12+
-- **Framework web**: FastAPI (decisión cerrada, no usar Django ni Flask)
-- **Base de datos**: PostgreSQL (versión mayor estable con soporte activo)
-- **ORM**: SQLAlchemy + Alembic para migraciones
-- **WebSockets**: integrados en FastAPI (no usar Socket.IO ni librerías externas)
-- **Validación**: Pydantic
-- **Hashing**: passlib + bcrypt
-- **Cripto / firmas**: librería `cryptography`
-- **PDF**: WeasyPrint o ReportLab según necesidad
-- **Testing**: pytest
-- **Servidor**: el sistema corre nativo sobre Linux con systemd. **No usar Docker en MVP.**
+Archivos de referencia iniciales:
 
-No introducir librerías nuevas sin justificación explícita. Si necesitas algo que no está en esta lista, pregúntalo antes de instalarlo.
+openspec/reference-specs/20-mesas.md
+openspec/reference-specs/21-comandas.md
+openspec/reference-specs/22-cocina-barra.md
 
-## Arquitectura física
+No duplicar estas reglas dentro de CLAUDE.md. Este archivo debe ser corto y operativo para no consumir tokens innecesarios.
 
-- Un único servidor local en el restaurante, que cumple **doble rol**: aloja el backend + base de datos + frontend servido, y actúa como la computadora de caja del Cajero/Barman.
-- Backend y PostgreSQL corren en el mismo host. Conexión interna por socket Unix local o TCP a localhost. No usar TLS para conexiones intra-host.
-- TLS sí es obligatorio para acceso administrativo remoto vía VPN.
-- Sin Docker, sin contenedores. Procesos gestionados con systemd.
+Forma de trabajo con OpenSpec
 
-## Estructura del repo (a crear)
+El desarrollo se hará como en osiris-inventario: backend y frontend avanzan juntos desde un único OpenSpec ubicado en el backend.
 
-```
-osiris-menu-be/
-├── CLAUDE.md                      ← este archivo
-├── README.md
-├── pyproject.toml                 ← gestión de deps con pip/uv
-├── alembic.ini
-├── specs/                         ← single source of truth de negocio
-│   ├── 00-base/
-│   │   ├── vision.md
-│   │   ├── stack.md
-│   │   ├── principles.md
-│   │   ├── decisions.md           ← N-XX, T-XX, D-XX
-│   │   └── glossary.md
-│   ├── 20-mesas/spec.md
-│   ├── 21-comandas/spec.md
-│   └── 22-cocina-barra/spec.md
-├── src/
-│   └── osiris/
-│       ├── __init__.py
-│       ├── main.py                ← entrypoint FastAPI
-│       ├── config.py              ← settings (pydantic-settings)
-│       ├── db.py                  ← engine, sesión, base SQLAlchemy
-│       ├── auth/                  ← autenticación, autorización, niveles
-│       ├── modules/
-│       │   ├── mesas/             ← §20
-│       │   ├── comandas/          ← §21
-│       │   └── cocina_barra/      ← §22
-│       ├── websocket/             ← canales WS, broadcasting
-│       └── shared/                ← utilidades, tipos comunes
-├── migrations/                    ← alembic versions
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── conftest.py
-└── scripts/                       ← bash de deploy, backup, restore
-```
+Flujo obligatorio:
 
-Cada módulo dentro de `src/osiris/modules/` sigue la misma estructura interna:
+1. Leer openspec/project.md.
+2. Leer openspec/decisions.md.
+3. Leer openspec/glossary.md.
+4. Leer la spec de referencia del módulo si existe.
+5. Crear o actualizar proposal/spec en OpenSpec antes de implementar cambios grandes.
+6. Implementar backend, frontend y tests alineados al mismo contrato.
+7. No inventar reglas de negocio fuera de OpenSpec.
 
-```
+Si una regla no existe o es ambigua:
+
+* No resolverla silenciosamente en código.
+* Proponer una decisión nueva D-XX.
+* Documentar módulos impactados.
+* Esperar cierre explícito antes de implementar la regla como definitiva.
+
+Alcance actual del MVP
+
+Módulos iniciales:
+
+* §20 Mesas y zonas
+* §21 Comandas
+* §22 Cocina y barra
+
+Estos módulos deben quedar preparados para integrarse luego con:
+
+* §23 Caja y cobro
+* §24 Facturación SRI
+* §25 Catálogo
+* §26 Inventario
+* §28 Reservas
+* §31 Configuración
+* §32 Carta pública QR
+
+Stack obligatorio backend
+
+Usar el mismo enfoque técnico de osiris-inventario-be, adaptado a osiris-menu.
+
+* Python 3.11+
+* FastAPI
+* Uvicorn
+* PostgreSQL 16
+* SQLAlchemy 2.x async
+* asyncpg
+* Alembic
+* Pydantic v2
+* pydantic-settings
+* Poetry
+* python-jose
+* passlib[bcrypt]
+* bcrypt
+* Redis async
+* httpx
+* ReportLab y openpyxl cuando aplique
+* pytest
+* pytest-asyncio
+* pytest-cov
+* ruff
+* Docker
+* Docker Compose
+
+No usar Django, Flask, Celery, microservicios ni frameworks adicionales sin decisión explícita.
+
+Stack obligatorio frontend
+
+El frontend vive en ../osiris-menu-fe, pero se coordina desde este OpenSpec.
+
+Usar el mismo enfoque técnico y visual de osiris-inventario-fe:
+
+* React 19
+* TypeScript estricto
+* Vite
+* React Router DOM 7
+* TanStack Query 5
+* Axios
+* Tailwind CSS 4
+* shadcn/ui sobre Radix UI
+* React Hook Form
+* Zod
+* lucide-react
+* date-fns
+* Recharts
+* Vitest
+* Testing Library
+* Playwright
+* Docker
+* Docker Compose
+
+No usar Redux, MobX, Material UI, Ant Design, Bootstrap, styled-components ni emotion.
+
+Docker obligatorio
+
+A diferencia de la decisión inicial de discovery, este proyecto sí debe implementarse con Docker desde el inicio.
+
+Debe existir un único docker-compose.yml en la carpeta raíz del workspace que levante:
+
+* postgres
+* redis
+* api
+* web
+
+Estructura recomendada:
+
+osiris-menu/
+├── docker-compose.yml
+├── .env.example
+├── osiris-menu-be/
+│   ├── CLAUDE.md
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   ├── alembic.ini
+│   ├── openspec/
+│   ├── src/
+│   ├── tests/
+│   └── scripts/
+└── osiris-menu-fe/
+    ├── CLAUDE.md
+    ├── Dockerfile
+    ├── package.json
+    ├── vite.config.ts
+    ├── src/
+    └── tests/
+
+Comando principal:
+
+docker compose up --build
+
+No crear docker-compose separados que compitan entre sí.
+
+docker-compose.yml esperado en la raíz
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: osiris
+      POSTGRES_PASSWORD: osiris_dev_pass
+      POSTGRES_DB: osiris_menu
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osiris -d osiris_menu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  api:
+    build:
+      context: ./osiris-menu-be
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://osiris:osiris_dev_pass@postgres:5432/osiris_menu
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-change-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      APP_ENV: development
+      CORS_ORIGINS: '["http://localhost:5173"]'
+    volumes:
+      - ./osiris-menu-be/src:/app/src
+      - ./osiris-menu-be/openspec:/app/openspec
+      - ./osiris-menu-be/migrations:/app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  web:
+    build:
+      context: ./osiris-menu-fe
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_API_PROXY_TARGET: http://api:8000
+    volumes:
+      - ./osiris-menu-fe/src:/app/src
+      - ./osiris-menu-fe/public:/app/public
+    depends_on:
+      - api
+volumes:
+  postgres_data:
+  redis_data:
+
+Dockerfile backend esperado
+
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install poetry==1.8.4 && \
+    poetry config virtualenvs.create false
+COPY pyproject.toml poetry.lock* ./
+RUN poetry install --no-interaction --no-ansi --no-root
+COPY . .
+RUN if [ -f scripts/entrypoint.sh ]; then \
+      sed -i 's/\r$//' scripts/entrypoint.sh && chmod +x scripts/entrypoint.sh; \
+    fi
+EXPOSE 8000
+CMD ["uvicorn", "osiris.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+Si el layout real usa app/main.py, cambiar el comando a:
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+No mezclar layouts.
+
+Estructura backend recomendada
+
+src/osiris/
+├── main.py
+├── config.py
+├── db.py
+├── auth/
+├── modules/
+│   ├── mesas/
+│   ├── comandas/
+│   └── cocina_barra/
+├── websocket/
+└── shared/
+
+Cada módulo:
+
 modules/<nombre>/
 ├── __init__.py
-├── models.py          ← SQLAlchemy models
-├── schemas.py         ← Pydantic schemas para API
-├── service.py         ← lógica de negocio pura
-├── api.py             ← rutas FastAPI
-├── events.py          ← eventos WebSocket emitidos por el módulo
-└── README.md          ← resumen y ejemplos de uso
-```
+├── models.py
+├── schemas.py
+├── service.py
+├── api.py
+├── events.py
+└── README.md
 
-## Principios no negociables
+Reglas de implementación
 
-Vienen del documento Product Vision (Parte I, §7). Son **prevalentes sobre cualquier decisión técnica oportunista**:
+* La lógica de negocio vive en service.py.
+* Las rutas FastAPI solo orquestan request/response.
+* Los modelos SQLAlchemy no deben contener lógica compleja.
+* Los schemas Pydantic son el contrato público.
+* Todo endpoint mutador acepta X-Request-Id para idempotencia.
+* Toda mutación material genera log auditable.
+* Toda acción sensible valida nivel de autorización.
+* Toda transición de estado debe estar respaldada por spec o decisión.
+* Todo cambio de modelos requiere migración Alembic.
+* Todo endpoint nuevo requiere tests.
 
-1. **Trazabilidad total**: toda acción material queda registrada en log inmutable con usuario, timestamp, contexto y, cuando aplica, motivo.
-2. **Inmutabilidad fiscal**: una factura emitida no se modifica. Corrección solo vía nota de crédito.
-3. **Operación offline resiliente**: el sistema opera sin internet. Sólo SRI, email/WhatsApp y backup-nube requieren conectividad.
-4. **Cumplimiento como propiedad emergente**: el operador cumple normativa SRI/LOPDP/IESS por usar el sistema correctamente, sin saber los detalles legales.
-5. **Cumplimiento por defecto**: ante ambigüedad, la opción por defecto es la que cumple más estrictamente la normativa.
-6. **Mínimo privilegio**: acciones sensibles requieren autorización adicional con motivo registrado.
-7. **Configuración trazable**: cambio de parámetro = log con usuario, timestamp, valor anterior y nuevo.
-8. **Evolución sin migración**: el MVP soporta las extensiones de Fase 2 (auto-pedido QR, WhatsApp Business API) sin rediseño.
-9. **Transparencia con el operador**: el operador siempre sabe el estado del sistema (conectividad SRI, cola pendiente, tiempos).
-10. **Validación rigurosa antes de producción**: nada llega a producción sin pruebas unitarias e integración con SRI sandbox.
+API
 
-## Roles del sistema
+* Versionado en path: /api/v1/...
+* OpenAPI generado por FastAPI.
+* Errores estructurados:
 
-Siete roles. Permisos detallados están en `specs/00-base/decisions.md`:
+{
+  "error": {
+    "code": "DOMAIN_ERROR_CODE",
+    "message": "Mensaje legible para el operador",
+    "details": {}
+  }
+}
 
-- **Super Admin** (familiar técnico — cónyuge de la PO): mantenimiento, custodia de credenciales fiscales.
-- **Admin Socio** (cualquiera de los 3 hermanos): gestión de negocio, autorización nivel 4.
-- **Admin Contable** (hermana titular del RUC): gestión fiscal.
-- **Cajero / Barman**: cobro, facturación, cierre de caja, atención de barra.
-- **Mesero**: comandas y atención de sala.
-- **Chef**: cocina, control de inventario de cocina.
-- **Ayudante**: apoyo en cocina.
+WebSockets
 
-Niveles de autorización:
-- **Nivel 1**: cualquier operador autenticado.
-- **Nivel 2**: Cajero, Admin Socio, Admin Contable, Super Admin.
-- **Nivel 3**: Admin Socio, Admin Contable, Super Admin.
-- **Nivel 4**: Admin Socio o Super Admin.
+Usar WebSockets nativos de FastAPI.
 
-## Cómo trabajar con las specs
+Canales iniciales:
 
-Las specs en `specs/` son **la fuente de verdad de negocio**. Antes de implementar cualquier comportamiento de un módulo, leer su spec.
+* mesas
+* comandas:<comanda_id>
+* cocina
+* barra
+* connectivity
 
-- Si una decisión está en spec, **implementarla tal como está**.
-- Si una decisión está en spec y crees que debe cambiar, **levanta una propuesta de cambio de spec**, no la cambies en código primero.
-- Si una decisión NO está en spec, **pregúntala antes de inventarla**.
-- Los identificadores **N-XX** (negocio), **T-XX** (técnico) y **D-XX** (funcional post-discovery) son referencias. Su definición vive en `specs/00-base/decisions.md`.
+No usar Socket.IO.
 
-## Convenciones de código
+Todo evento debe tener payload tipado y test asociado cuando afecte reglas críticas.
 
-- **Python**: PEP 8. Formato con `ruff format`. Lint con `ruff check`.
-- **Imports**: stdlib → terceros → propios, separados con línea en blanco.
-- **Type hints obligatorios** en toda función pública. Usar `from __future__ import annotations`.
-- **Naming**: snake_case para variables/funciones, PascalCase para clases, UPPER_CASE para constantes módulo.
-- **Logging**: usar `logging` del stdlib con configuración estructurada (JSON en producción). Nunca `print()`.
-- **Errores**: excepciones tipadas (no `raise Exception`). Excepciones de dominio van en `shared/exceptions.py`.
-- **Commits**: convencionales (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`). Referencia spec si aplica: `feat(comandas): add REG-21-08 ...` no es necesario pero ayuda.
+Seguridad
 
-## Reglas de seguridad — no negociables
+* Nunca commitear .env.
+* Nunca commitear certificados, claves privadas ni credenciales SRI.
+* Nunca loguear tokens, passwords, tarjetas ni datos fiscales completos.
+* No usar eval ni exec.
+* No construir SQL con strings.
+* Passwords solo con bcrypt vía passlib.
+* Sesión por cookie httpOnly.
+* No devolver tokens accesibles por JavaScript.
 
-- **NUNCA** poner credenciales, claves, tokens, contraseñas, certificados en código ni en archivos versionados. Usar variables de entorno y `.env` ignorado por git.
-- **NUNCA** loguear datos sensibles (contraseñas, tokens, datos fiscales completos del cliente, números de tarjeta).
-- **NUNCA** usar `eval`, `exec` o construcciones similares con input del usuario.
-- **NUNCA** construir SQL con string formatting; usar SQLAlchemy ORM o parámetros bindeados.
-- **Hashing de contraseñas**: solo bcrypt vía passlib. Nunca MD5 ni SHA1 para passwords.
-- **Datos personales**: aplicar LOPDP. Ver `specs/00-base/principles.md` para detalle.
+Testing
 
-## Cómo correr
+Sin tests, no se considera terminado.
 
-```bash
-# Setup inicial (una vez)
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-alembic upgrade head
+Backend:
 
-# Desarrollo
-uvicorn osiris.main:app --reload --port 8000
+docker compose exec api pytest
+docker compose exec api pytest tests/unit/
+docker compose exec api pytest tests/integration/
+docker compose exec api ruff check src tests
+docker compose exec api ruff format src tests
 
-# Tests
-pytest                          # toda la suite
-pytest tests/unit/              # solo unit
-pytest -k mesas                 # solo lo que matchea "mesas"
+Frontend desde este mismo flujo:
 
-# Lint / format
-ruff check src/ tests/
-ruff format src/ tests/
+docker compose exec web npm run lint
+docker compose exec web npm run test
+docker compose exec web npm run build
 
-# Migraciones
-alembic revision --autogenerate -m "describe change"
-alembic upgrade head
-```
+Criterios de terminado
 
-## Cuándo invocar a Claude Code
+Un cambio está terminado solo si:
 
-- Para implementar un módulo nuevo: **leer su spec primero**, luego pedir implementación.
-- Para refactorizar código: pedir lectura previa del módulo, luego propuesta antes de cambiar.
-- Para escribir tests: especificar qué REG/regla se está testeando.
-- Para resolver bugs: incluir el reproductor antes de pedir el fix.
+* La spec o decisión correspondiente existe.
+* Backend implementado.
+* Frontend implementado si hay impacto UI.
+* Tests backend agregados o actualizados.
+* Tests frontend agregados o actualizados cuando aplique.
+* Docker Compose levanta sin pasos manuales extra.
+* No hay reglas duplicadas fuera de OpenSpec.
+* No hay contradicción con openspec/decisions.md.
+* Se usa terminología de openspec/glossary.md.
 
-## Qué NO hacer
+Qué NO hacer
 
-- No introducir frameworks adicionales (no Celery, no Redis, no Django) sin justificación explícita acordada.
-- No usar Docker en MVP.
-- No introducir microservicios; el sistema es un monolito modular.
-- No agregar dependencias de servicios cloud para operación crítica diaria.
-- No mockear el SRI con datos falsos en producción; usar siempre el ambiente sandbox real del SRI para tests de integración.
-- No commitear `.env`, certificados, ni archivos con datos reales de empleados o clientes.
-
-## Comunicación con el frontend
-
-El frontend (`osiris-menu-fe`) consume:
-
-- **API REST** vía HTTP (formato OpenAPI generado por FastAPI).
-- **WebSockets** para eventos en tiempo real (cambios de estado de mesa, ítem, comanda).
-
-Contratos formales (schemas Pydantic, eventos WS) son la **interfaz pública del backend**. Cambios incompatibles requieren bump de versión de API.
-
-## Glosario rápido
-
-- **Comanda**: pedido de un grupo de clientes a una o más mesas. Vive desde apertura hasta cierre con facturación.
-- **Grupo de Mesas**: agrupación lógica de 2+ mesas con una sola comanda compartida.
-- **Combo**: producto vendible compuesto por componentes con ruteo independiente (cocina o barra).
-- **Vista operativa de cocina / barra**: pantalla de aplicación filtrada por ruteo, mostrada en tablet fija.
-- **Tablet fija**: dispositivo de 12-13" montado fijo en cocina o barra.
-- **Reserva teórica / Consumo confirmado**: modelo híbrido de inventario (D-01). Reserva al Enviado, consumo al pasar a En preparación.
-
-Glosario extendido: `specs/00-base/glossary.md`.
-
-## Nota sobre el entorno virtual
-
-Por un comportamiento específico de macOS y de cómo Python procesa archivos `.pth`
-cuando el directorio padre está marcado como `hidden`, este proyecto usa la
-convención:
-
-- `venv/` es la carpeta real del entorno virtual.
-- `.venv` es un symlink hacia `venv/`.
-
-Esto preserva la convención `.venv` que asumen las herramientas (uv, IDEs)
-mientras evita el bug del `ModuleNotFoundError` en macOS con layout `src/`.
-
-Para regenerar el entorno desde cero:
-
-```bash
-rm -rf venv .venv uv.lock
-uv venv venv             # crea venv/ explícitamente
-ln -s venv .venv         # crea el symlink
-uv sync                  # instala dependencias y el paquete editable
-```
-
-Ambas carpetas están ignoradas por git (`venv/` y `.venv/`).
+* No duplicar en este archivo el contenido completo de decisiones, glosario o specs.
+* No implementar reglas no documentadas.
+* No usar Docker Compose separados por repo como flujo principal.
+* No meter lógica de negocio en el frontend.
+* No guardar tokens en localStorage/sessionStorage.
+* No introducir librerías por comodidad sin justificar.
+* No cambiar nombres canónicos del glosario.
+* No ignorar idempotencia en mutaciones.
+* No crear endpoints sin tests.
+* No modificar reglas fiscales sin decisión explícita.
