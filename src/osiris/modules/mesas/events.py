@@ -16,6 +16,8 @@ from .models import EstadoMesa, EstadoZona
 CHANNEL = "mesas"
 
 MESA_ESTADO_CAMBIADO = "mesa.estado_cambiado"
+MESA_DESACTIVADA = "mesa.desactivada"
+MESA_REACTIVADA = "mesa.reactivada"
 ZONA_ESTADO_CAMBIADO = "zona.estado_cambiado"
 GRUPO_CREADO = "grupo.creado"
 GRUPO_ACTUALIZADO = "grupo.actualizado"
@@ -50,6 +52,29 @@ async def emit_mesa_estado_cambiado(
             "timestamp": _now_iso(),
         },
     )
+
+
+async def _emit_mesa_activa(
+    event_type: str, *, mesa_id: uuid.UUID, activa: bool, usuario_id: uuid.UUID | None
+) -> None:
+    await manager.broadcast(
+        CHANNEL,
+        {
+            "type": event_type,
+            "mesa_id": str(mesa_id),
+            "activa": activa,
+            "usuario_id": _opt_str(usuario_id),
+            "timestamp": _now_iso(),
+        },
+    )
+
+
+async def emit_mesa_desactivada(*, mesa_id: uuid.UUID, usuario_id: uuid.UUID | None = None) -> None:
+    await _emit_mesa_activa(MESA_DESACTIVADA, mesa_id=mesa_id, activa=False, usuario_id=usuario_id)
+
+
+async def emit_mesa_reactivada(*, mesa_id: uuid.UUID, usuario_id: uuid.UUID | None = None) -> None:
+    await _emit_mesa_activa(MESA_REACTIVADA, mesa_id=mesa_id, activa=True, usuario_id=usuario_id)
 
 
 async def emit_zona_estado_cambiado(

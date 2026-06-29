@@ -50,13 +50,13 @@ class MesaCreate(BaseModel):
     # `id` NO se acepta: lo genera el backend (D-mz-6).
     zona_id: uuid.UUID
     numero_visible: str = Field(min_length=1)
-    capacidad: int = 0
+    capacidad: int = Field(default=1, ge=1)  # capacidad positiva (REG-20-17)
 
 
 class MesaUpdate(BaseModel):
     zona_id: uuid.UUID | None = None
     numero_visible: str | None = Field(default=None, min_length=1)
-    capacidad: int | None = None
+    capacidad: int | None = Field(default=None, ge=1)  # REG-20-17
 
 
 class MesaRead(BaseModel):

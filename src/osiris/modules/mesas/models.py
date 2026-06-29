@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, Uuid, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -77,6 +77,15 @@ class GrupoMesas(Base):
 
 class Mesa(Base):
     __tablename__ = "mesas"
+    # Unicidad de numero_visible por zona, case-insensitive (REG-20-15, D-h1).
+    __table_args__ = (
+        Index(
+            "uq_mesas_zona_numero_lower",
+            "zona_id",
+            text("lower(numero_visible)"),
+            unique=True,
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     zona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("zonas.id"), nullable=False)

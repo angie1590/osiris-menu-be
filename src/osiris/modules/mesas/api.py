@@ -109,8 +109,9 @@ async def crear_mesa(
     data: schemas.MesaCreate,
     session: AsyncSession = Depends(get_session),
     _request_id: str = Depends(idempotency_guard),
+    usuario_id: uuid.UUID | None = Depends(current_operator),
 ) -> schemas.MesaRead:
-    mesa = await service.crear_mesa(session, data)
+    mesa = await service.crear_mesa(session, data, usuario_id=usuario_id)
     return schemas.MesaRead.model_validate(mesa)
 
 
@@ -152,6 +153,17 @@ async def marcar_libre(
     usuario_id: uuid.UUID | None = Depends(current_operator),
 ) -> schemas.MesaRead:
     mesa = await service.marcar_libre(session, mesa_id, usuario_id=usuario_id)
+    return schemas.MesaRead.model_validate(mesa)
+
+
+@mesas_router.post("/{mesa_id}/reactivar", response_model=schemas.MesaRead)
+async def reactivar_mesa(
+    mesa_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    _request_id: str = Depends(idempotency_guard),
+    usuario_id: uuid.UUID | None = Depends(current_operator),
+) -> schemas.MesaRead:
+    mesa = await service.reactivar_mesa(session, mesa_id, usuario_id=usuario_id)
     return schemas.MesaRead.model_validate(mesa)
 
 

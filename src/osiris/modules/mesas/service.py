@@ -11,7 +11,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...shared.audit import registrar_audit
@@ -68,6 +68,30 @@ async def _mesas_de_zona(session: AsyncSession, zona_id: uuid.UUID) -> list[Mesa
         select(Mesa).where(Mesa.zona_id == zona_id, Mesa.activa.is_(True))
     )
     return list(result.scalars().all())
+
+
+def _normalizar_numero(numero_visible: str) -> str:
+    """Trim de `numero_visible` antes de validar/guardar (REG-20-15, D-h1)."""
+    return numero_visible.strip()
+
+
+async def _numero_visible_duplicado(
+    session: AsyncSession,
+    zona_id: uuid.UUID,
+    numero_visible: str,
+    *,
+    excluir_mesa_id: uuid.UUID | None = None,
+) -> bool:
+    """Unicidad case-insensitive por zona, incluyendo mesas inactivas (REG-20-15)."""
+    norm = _normalizar_numero(numero_visible).lower()
+    stmt = select(Mesa.id).where(
+        Mesa.zona_id == zona_id,
+        func.lower(func.trim(Mesa.numero_visible)) == norm,
+    )
+    if excluir_mesa_id is not None:
+        stmt = stmt.where(Mesa.id != excluir_mesa_id)
+    result = await session.execute(stmt)
+    return result.first() is not None
 
 
 # ---- máquina de estados de mesa (D-mz-1) ----
@@ -214,10 +238,33 @@ async def desactivar_zona(  # REG-20-07 + D-mz-11
 # ---- Mesas ----
 
 
-async def crear_mesa(session: AsyncSession, data: schemas.MesaCreate) -> Mesa:
-    await _load_zona(session, data.zona_id)  # 404 si la zona no existe
-    mesa = Mesa(**data.model_dump())  # id lo genera el backend (D-mz-6)
+async def crear_mesa(
+    session: AsyncSession, data: schemas.MesaCreate, *, usuario_id: uuid.UUID | None = None
+) -> Mesa:
+    zona = await _load_zona(session, data.zona_id)  # 404 si la zona no existe
+    if zona.estado != EstadoZona.ACTIVA:  # REG-20-16
+        raise _conflict("Solo se pueden crear mesas en zonas activas", "ZONA_NO_ACTIVA")
+
+    payload = data.model_dump()
+    payload["numero_visible"] = _normalizar_numero(payload["numero_visible"])
+    if not payload["numero_visible"]:
+        raise _invalid("numero_visible es obligatorio", "NUMERO_VISIBLE_REQUERIDO")
+    if await _numero_visible_duplicado(
+        session, data.zona_id, payload["numero_visible"]
+    ):  # REG-20-15
+        raise _conflict("numero_visible duplicado en la zona", "NUMERO_VISIBLE_DUPLICADO")
+
+    mesa = Mesa(**payload)  # id lo genera el backend (D-mz-6)
     session.add(mesa)
+    await session.flush()
+    await registrar_audit(
+        session,
+        event_type="mesa.creada",
+        entity_type="mesa",
+        entity_id=mesa.id,
+        user_id=usuario_id,
+        payload={"zona_id": str(mesa.zona_id), "numero_visible": mesa.numero_visible},
+    )
     await session.commit()
     await session.refresh(mesa)
     return mesa
@@ -247,8 +294,19 @@ async def actualizar_mesa(
 ) -> Mesa:
     mesa = await _load_mesa(session, mesa_id)
     payload = data.model_dump(exclude_unset=True)
+    if payload.get("numero_visible") is not None:
+        payload["numero_visible"] = _normalizar_numero(payload["numero_visible"])
     if "zona_id" in payload:
         await _load_zona(session, payload["zona_id"])
+
+    if "numero_visible" in payload or "zona_id" in payload:  # REG-20-15
+        target_zona = payload.get("zona_id", mesa.zona_id)
+        nuevo_numero = payload.get("numero_visible", mesa.numero_visible)
+        if await _numero_visible_duplicado(
+            session, target_zona, nuevo_numero, excluir_mesa_id=mesa.id
+        ):
+            raise _conflict("numero_visible duplicado en la zona", "NUMERO_VISIBLE_DUPLICADO")
+
     for field, value in payload.items():
         setattr(mesa, field, value)
     await session.commit()
@@ -256,11 +314,23 @@ async def actualizar_mesa(
     return mesa
 
 
-async def baja_mesa(  # REG-20-12 (baja lógica, id permanente)
+async def baja_mesa(  # REG-20-12 + REG-20-18 (desactivar = baja lógica validada)
     session: AsyncSession, mesa_id: uuid.UUID, *, usuario_id: uuid.UUID | None
 ) -> Mesa:
     mesa = await _load_mesa(session, mesa_id)
+    if mesa.estado in (EstadoMesa.OCUPADA, EstadoMesa.RESERVADA):
+        raise _conflict(
+            "No se puede desactivar una mesa ocupada o reservada", "MESA_NO_DESACTIVABLE"
+        )
+    if mesa.grupo_id is not None:
+        raise _conflict("No se puede desactivar una mesa agrupada", "MESA_NO_DESACTIVABLE")
+    if mesa.comanda_activa_id is not None:
+        raise _conflict(
+            "No se puede desactivar una mesa con comanda activa", "MESA_NO_DESACTIVABLE"
+        )
+
     mesa.activa = False
+    mesa.estado = EstadoMesa.INACTIVA
     await registrar_audit(
         session,
         event_type="mesa.baja_logica",
@@ -269,6 +339,33 @@ async def baja_mesa(  # REG-20-12 (baja lógica, id permanente)
         user_id=usuario_id,
         payload={"numero_visible": mesa.numero_visible},
     )
+    await events.emit_mesa_desactivada(mesa_id=mesa.id, usuario_id=usuario_id)
+    await session.commit()
+    await session.refresh(mesa)
+    return mesa
+
+
+async def reactivar_mesa(  # REG-20-19
+    session: AsyncSession, mesa_id: uuid.UUID, *, usuario_id: uuid.UUID | None
+) -> Mesa:
+    mesa = await _load_mesa(session, mesa_id)
+    if mesa.activa:
+        raise _conflict("La mesa ya está activa", "MESA_YA_ACTIVA")
+    zona = await _load_zona(session, mesa.zona_id)
+    if zona.estado != EstadoZona.ACTIVA:
+        raise _conflict("Solo se puede reactivar si la zona está activa", "ZONA_NO_ACTIVA")
+
+    mesa.activa = True
+    mesa.estado = EstadoMesa.LIBRE
+    await registrar_audit(
+        session,
+        event_type="mesa.reactivada",
+        entity_type="mesa",
+        entity_id=mesa.id,
+        user_id=usuario_id,
+        payload={"numero_visible": mesa.numero_visible},
+    )
+    await events.emit_mesa_reactivada(mesa_id=mesa.id, usuario_id=usuario_id)
     await session.commit()
     await session.refresh(mesa)
     return mesa
