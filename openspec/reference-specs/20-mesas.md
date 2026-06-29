@@ -54,11 +54,11 @@ Modela el layout físico del restaurante. Gestiona el estado de ocupación de la
             └─ horario reserva ──→ Reservada  │
                                       │      │
                                       ├──── verificación reserva ─→ Ocupada
-                                      │      
+                                      │
                                       └─ no-show timeout ─→ Libre
-       
+
        Ocupada ── cierre comanda ──┬─→ Por limpiar ── operador marca ──→ Libre
-                                   │                
+                                   │
                                    └─→ Libre (si config salta Por limpiar)
 
        Libre / Reservada ── zona pasa a Inactiva ──→ Inactiva
@@ -73,20 +73,20 @@ Modela el layout físico del restaurante. Gestiona el estado de ocupación de la
 
 ## Reglas de negocio (las críticas)
 
-1. **R-MESA-01**: una mesa solo puede pasar a Ocupada desde Libre o Reservada.
-2. **R-MESA-02**: una mesa no puede tener más de una comanda activa.
-3. **R-MESA-03**: una mesa en Grupo activo no puede ser parte de otro Grupo ni tener comanda independiente.
-4. **R-MESA-04**: transición a Reservada es automática 30 minutos antes del horario de reserva (configurable). Durante esta ventana, walk-in requiere autorización Cajero o Admin Socio.
-5. **R-MESA-05**: apertura sobre mesa Reservada requiere verificación explícita (código de reserva o nombre del cliente). Vincula comanda con reserva (D-05).
-6. **R-MESA-06**: al cerrar comanda, mesa pasa a Por limpiar (default) o Libre (según configuración). Si era Grupo, las mesas se separan.
-7. **R-MESA-07**: zona Inactiva no admite mesas Ocupadas ni Reservadas.
-8. **R-MESA-08**: transición Activa → En cierre requiere autorización Nivel 2 con motivo (D-06).
-9. **R-MESA-09**: zona En cierre rechaza nuevas comandas y nuevas reservas. Comandas abiertas siguen su curso. Reservas futuras se reasignan o cancelan.
-10. **R-MESA-10**: al cerrarse la última comanda de una zona En cierre, pasa automáticamente a Inactiva.
-11. **R-MESA-11**: zona Inactiva → Activa: el sistema revisa reservas pendientes y las reactiva si el cliente no fue notificado de cancelación.
-12. **R-MESA-12**: identificador de mesa no se reutiliza nunca, incluso si la mesa se da de baja (D-04). Si se reemplaza físicamente, el QR se reimprime con el mismo identificador.
-13. **R-MESA-13**: reserva no presentada (20 min después del horario, configurable): mesa pasa de Reservada a Libre, reserva se marca como No presentada.
-14. **R-MESA-14**: traslado Por limpiar → Libre por cualquier operador autenticado sin autorización adicional, si el paso no está saltado globalmente (D-07).
+1. **REG-20-01**: una mesa solo puede pasar a Ocupada desde Libre o Reservada.
+2. **REG-20-02**: una mesa no puede tener más de una comanda activa.
+3. **REG-20-03**: una mesa en Grupo activo no puede ser parte de otro Grupo ni tener comanda independiente.
+4. **REG-20-04**: transición a Reservada es automática 30 minutos antes del horario de reserva (configurable). Durante esta ventana, walk-in requiere autorización Cajero o Admin Socio.
+5. **REG-20-05**: apertura sobre mesa Reservada requiere verificación explícita (código de reserva o nombre del cliente). Vincula comanda con reserva (D-05).
+6. **REG-20-06**: al cerrar comanda, mesa pasa a Por limpiar (default) o Libre (según configuración). Si era Grupo, las mesas se separan.
+7. **REG-20-07**: zona Inactiva no admite mesas Ocupadas ni Reservadas.
+8. **REG-20-08**: transición Activa → En cierre requiere autorización Nivel 2 con motivo (D-06).
+9. **REG-20-09**: zona En cierre rechaza nuevas comandas y nuevas reservas. Comandas abiertas siguen su curso. Reservas futuras se reasignan o cancelan.
+10. **REG-20-10**: al cerrarse la última comanda de una zona En cierre, pasa automáticamente a Inactiva.
+11. **REG-20-11**: zona Inactiva → Activa: el sistema revisa reservas pendientes y las reactiva si el cliente no fue notificado de cancelación.
+12. **REG-20-12**: identificador de mesa no se reutiliza nunca, incluso si la mesa se da de baja (D-04). Si se reemplaza físicamente, el QR se reimprime con el mismo identificador.
+13. **REG-20-13**: reserva no presentada (20 min después del horario, configurable): mesa pasa de Reservada a Libre, reserva se marca como No presentada.
+14. **REG-20-14**: traslado Por limpiar → Libre por cualquier operador autenticado sin autorización adicional, si el paso no está saltado globalmente (D-07).
 
 ## API esperada (esbozo)
 

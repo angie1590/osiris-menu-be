@@ -35,25 +35,26 @@ Cada vista (cocina o barra) muestra:
 
 ## Reglas de negocio (críticas)
 
-1. **R-COC-01**: el ruteo del ítem se determina **exclusivamente** por la configuración del producto en el catálogo (§25). El módulo solo filtra y muestra.
-2. **R-COC-02**: ruteo único por ítem vendible (D-03). Productos que requieren cocina + barra se modelan como combos con componentes separados.
-3. **R-COC-03**: al transitar ítem a **En preparación** desde una tablet fija, se aplica **consumo confirmado** del inventario (D-01) según receta del producto. Si es componente de combo, descuento al nivel del componente.
-4. **R-COC-04**: anulación desde tablet fija sujeta a matriz D-02:
+1. **R-22-01**: el ruteo del ítem se determina **exclusivamente** por la configuración del producto en el catálogo (§25). El módulo solo filtra y muestra.
+2. **R-22-02**: ruteo único por ítem vendible (D-03). Productos que requieren cocina + barra se modelan como combos con componentes separados.
+3. **R-22-03**: al transitar ítem a **En preparación** desde una tablet fija, se aplica **consumo confirmado** del inventario (D-01) según receta del producto. Si es componente de combo, descuento al nivel del componente.
+4. **R-22-04**: anulación desde tablet fija sujeta a matriz D-02:
    - Enviado → Anulado: motivo obligatorio.
    - En preparación → Anulado: motivo + Nivel 2.
    - No se permite anular Listo ni posteriores desde tablet fija.
-5. **R-COC-05**: marcar un ítem como **Listo no implica entrega**. La entrega la marca el Mesero en su propia tablet cuando lleva el producto a la mesa.
-6. **R-COC-06**: para combos, el padre pasa a Listo solo cuando todos los componentes están Listos. Hasta entonces, el padre permanece En preparación.
-7. **R-COC-07**: reporte de agotamiento (N-11):
+5. **R-22-05**: marcar un ítem como **Listo no implica entrega**. La entrega la marca el Mesero en su propia tablet cuando lleva el producto a la mesa.
+6. **R-22-06**: para combos, el padre pasa a Listo solo cuando todos los componentes están Listos. Hasta entonces, el padre permanece En preparación.
+7. **R-22-07**: reporte de agotamiento (N-11):
    - Transita el producto a Agotado en catálogo.
    - **No afecta ítems ya agregados** a comandas abiertas (siguen su curso de preparación).
    - Bloquea nuevas adiciones del producto a cualquier comanda.
    - Se revierte al restaurar el producto (operador) o automáticamente al reinicio de servicio según configuración.
-8. **R-COC-08**: ítem Rechazado (D-10a) **no libera** el consumo confirmado. La merma se preserva. Esto queda en log.
-9. **R-COC-09**: tablet fija opera en modo kiosko. Pérdida de conexión: muestra indicador, los últimos datos quedan visibles. **No acepta transiciones de estado** durante ventana offline; se permiten solo al restablecer conexión.
-10. **R-COC-10**: sesión compartida con PIN. Acciones que requieren autorización individual (Nivel 2 para anular En preparación, por ejemplo) exigen re-autenticación con PIN personal en el momento. Log refleja el usuario individual identificado.
-11. **R-COC-11**: tiempos de preparación estándar provienen del catálogo (configurados por Chef o Admin Socio). Umbrales de color (100% amarillo, 150% rojo) son configurables globalmente.
-12. **R-COC-12**: orden estable de tarjetas. Si dos comandas se abren en el mismo segundo, criterio de desempate: identificador correlativo.
+8. **R-22-08**: ítem Rechazado (D-10a) **no libera** el consumo confirmado. La merma se preserva. Esto queda en log.
+9. **R-22-09**: tablet fija opera en modo kiosko. Pérdida de conexión: muestra indicador, los últimos datos quedan visibles. **No acepta transiciones de estado** durante ventana offline; se permiten solo al restablecer conexión.
+10. **R-22-10**: sesión compartida con PIN. Acciones que requieren autorización individual (Nivel 2 para anular En preparación, por ejemplo) exigen re-autenticación con PIN personal en el momento. Log refleja el usuario individual identificado.
+11. **R-22-11**: tiempos de preparación estándar provienen del catálogo (configurados por Chef o Admin Socio). Umbrales de color (100% amarillo, 150% rojo) son configurables globalmente.
+12. **R-22-12**: orden estable de tarjetas. Si dos comandas se abren en el mismo segundo, criterio de desempate: identificador correlativo.
+13. **REG-22-13**: la vista operativa de cocina/barra debe ser fullscreen, táctil, legible a distancia y no debe depender de teclado físico. Toda acción principal debe estar disponible como botón grande con confirmación cuando aplique.
 
 ## Sonidos de notificación
 

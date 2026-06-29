@@ -130,6 +130,16 @@ Términos del dominio. Esta es la **terminología obligatoria** en código, come
 
 **Semáforo de conectividad** — Indicador visual de tres colores (verde, amarillo, rojo) mostrado siempre en la UI para informar el estado de conectividad con el SRI.
 
+**Workspace raíz** — Carpeta local que contiene `docker-compose.yml`, `osiris-menu-be/` y `osiris-menu-fe/`. Es el punto desde donde se levanta el sistema completo en desarrollo.
+
+**Docker Compose raíz** — Archivo único de orquestación que levanta backend, frontend, PostgreSQL y Redis. Es el flujo oficial de desarrollo.
+
+**Servicio api** — Contenedor Docker del backend FastAPI.
+
+**Servicio web** — Contenedor Docker del frontend Vite/React.
+
+**Red interna Docker** — Red privada creada por Docker Compose para que `web`, `api`, `postgres` y `redis` se comuniquen entre sí.
+
 ---
 
 ## Identificadores

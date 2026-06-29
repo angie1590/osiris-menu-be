@@ -8,29 +8,55 @@ El frontend vive en el repo `osiris-menu-fe`. Las decisiones de negocio del sist
 
 | Capa | Tecnología | Nota |
 |---|---|---|
-| Lenguaje | Python 3.12+ | |
+| Lenguaje | Python 3.11+ | Alineado con `osiris-inventario-be`. |
+| Dependencias | Poetry | Gestión de dependencias y entorno del backend. |
 | Framework web | FastAPI | Decisión cerrada T-15. No usar Django ni Flask. |
-| Base de datos | PostgreSQL | Versión mayor estable con soporte activo. |
-| ORM | SQLAlchemy + Alembic | |
-| Validación | Pydantic | |
-| WebSockets | Nativos en FastAPI | No Socket.IO ni libs externas. |
+| Servidor ASGI | Uvicorn | Ejecución del backend FastAPI. |
+| Base de datos | PostgreSQL 16 | Base transaccional principal. |
+| ORM | SQLAlchemy 2.x async + Alembic | SQLAlchemy async para runtime; Alembic para migraciones. |
+| Driver DB | asyncpg | Driver PostgreSQL async. |
+| Validación | Pydantic v2 | Schemas de API y validación de datos. |
+| Settings | pydantic-settings | Configuración por variables de entorno. |
+| WebSockets | Nativos en FastAPI | No Socket.IO ni librerías externas. |
 | Hashing | passlib + bcrypt | Obligatorio para passwords. |
-| Cripto | cryptography | Para certificados SRI. |
-| PDF | WeasyPrint o ReportLab | |
-| Testing | pytest | |
-| Tareas programadas | APScheduler | Integrado. Sin Celery/Redis en MVP. |
+| Auth/JWT | python-jose | Firmado y validación de tokens si aplica. |
+| Cripto | cryptography | Certificados SRI y operaciones criptográficas. |
+| PDF | ReportLab o WeasyPrint | Según necesidad de comprobantes/reportes. |
+| Excel | openpyxl | Exportaciones operativas/reportes cuando aplique. |
+| HTTP client | httpx | Integraciones externas, SRI u otros servicios. |
+| Testing | pytest + pytest-asyncio + pytest-cov | Unit e integración. |
+| Lint/format | ruff | `ruff check` y `ruff format`. |
+| Tareas programadas | APScheduler | Jobs locales programados. No Celery. |
+| Cache/estado operativo liviano | Redis async | Cache, estado efímero o coordinación local. No dependencia cloud. |
+| Contenedores | Docker + Docker Compose | Un único compose raíz levanta backend, frontend, PostgreSQL y Redis. |
 
 No introducir librerías nuevas sin justificación explícita.
 
-## Arquitectura física
+## Arquitectura física y entorno de ejecución
 
-- **Un único servidor local** en el restaurante con **doble rol**: aloja el backend + base de datos + frontend servido, y actúa como **computadora de caja** del Cajero/Barman.
-- **Tablets de meseros** de 10" autenticadas individualmente.
-- **Tablets fijas de cocina y barra** de 12-13" en modo kiosko con PIN compartido.
-- **Sin Docker en MVP**. Procesos gestionados por systemd. Scripts Bash versionados para despliegue.
-- Backend y PostgreSQL en el mismo host. Conexión por socket Unix local o TCP a localhost. **No requiere TLS** intra-host. TLS sí es obligatorio para acceso remoto vía VPN.
-- HTTPS / TLS y WSS obligatorios para conexiones frontend ↔ backend, incluso en red local.
-- **Tres redes lógicas separadas**: Sistema, Empleados, Clientes. Sin acceso entre ellas excepto destinos autorizados a internet desde Red Sistema (SRI, NTP, DNS, OCSP, backups cloud, VPN admin).
+* Un único servidor local en el restaurante con doble rol: aloja backend, base de datos, frontend servido y actúa como computadora de caja.
+* El sistema se implementa con Docker desde el inicio.
+* En desarrollo debe existir un único `docker-compose.yml` en la raíz del workspace que levante:
+
+  - `postgres`
+
+  - `redis`
+
+  - `api`
+
+  - `web`
+
+* Backend, frontend y servicios de infraestructura se levantan juntos con:
+
+```bash
+
+docker compose up --build
+
+* No crear docker-compose separados por repo como flujo principal.
+* En producción se podrá decidir si mantener Docker Compose o migrar a despliegue gestionado por systemd, pero el MVP de desarrollo se construye y valida con Docker.
+* Backend y PostgreSQL se comunican por red interna Docker.
+* El frontend consume el backend por VITE_API_URL en navegador y por VITE_API_PROXY_TARGET=http://api:8000 dentro de Docker.
+* HTTPS/TLS y WSS son obligatorios para operación real/remota; en desarrollo local pueden usarse HTTP/WS.
 
 ## Principios no negociables
 
@@ -180,7 +206,8 @@ Términos canónicos del dominio. Detalle completo en `openspec/glossary.md`. Lo
 ## Qué NO hacer
 
 - No introducir frameworks adicionales (Celery, Redis, Django) sin justificación explícita.
-- No usar Docker en MVP.
+- No quitar Docker ni romper el `docker-compose.yml` raíz.
+- No crear un compose independiente para backend o frontend que contradiga el compose raíz.
 - No introducir microservicios. El sistema es monolito modular.
 - No depender de servicios cloud para operación crítica diaria.
 - No mockear el SRI con datos falsos en producción; usar sandbox real para integración.

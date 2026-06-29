@@ -60,7 +60,7 @@ Gestiona el ciclo de vida del pedido del cliente: apertura sobre mesa, agregado/
    Abierta ──────┤                                                 │
                   │                                                │
                   └─ todos los ítems anulados / sin consumo ──→ Anulada
-                                            
+
    Cerrada ── reapertura Nivel 4 ──→ Abierta (con nota de crédito asociada)
 ```
 
@@ -87,20 +87,20 @@ Transiciones permitidas según D-02 (matriz de anulación):
 
 ## Reglas de negocio (críticas)
 
-1. **R-CMD-01**: toda comanda tiene al menos una mesa asociada al abrirse.
-2. **R-CMD-02**: el Mesero responsable se asigna al abrir. Cambio queda en log.
-3. **R-CMD-03**: precio unitario se congela al agregar el ítem (N-04). Cambios de catálogo no afectan ítems ya agregados.
-4. **R-CMD-04**: ítem Anulado o Rechazado **se conserva** en la comanda como registro histórico. No se elimina.
-5. **R-CMD-05**: la comanda no puede transitar a Pendiente de cobro si tiene ítems en estado no terminal (Pendiente, Enviado, En preparación, Listo).
-6. **R-CMD-06**: la comanda no puede transitar a Cerrada sin facturación completa por §23 Caja. Excepción: anulación explícita Nivel 2 (R-CMD-07).
-7. **R-CMD-07**: anulación de comanda completa requiere motivo + Nivel 2 (D-10b). Sin consecuencia fiscal. Mesa pasa a Por limpiar o Libre.
-8. **R-CMD-08**: descuento de inventario híbrido (D-01):
+1. **REG-21-01**: toda comanda tiene al menos una mesa asociada al abrirse.
+2. **REG-21-02**: el Mesero responsable se asigna al abrir. Cambio queda en log.
+3. **REG-21-03**: precio unitario se congela al agregar el ítem (N-04). Cambios de catálogo no afectan ítems ya agregados.
+4. **REG-21-04**: ítem Anulado o Rechazado **se conserva** en la comanda como registro histórico. No se elimina.
+5. **REG-21-05**: la comanda no puede transitar a Pendiente de cobro si tiene ítems en estado no terminal (Pendiente, Enviado, En preparación, Listo).
+6. **REG-21-06**: la comanda no puede transitar a Cerrada sin facturación completa por §23 Caja. Excepción: anulación explícita Nivel 2 (R-21-07).
+7. **REG-21-07**: anulación de comanda completa requiere motivo + Nivel 2 (D-10b). Sin consecuencia fiscal. Mesa pasa a Por limpiar o Libre.
+8. **REG-21-08**: descuento de inventario híbrido (D-01):
    - Al pasar ítem a **Enviado**: crea **reserva teórica**.
    - Al pasar a **En preparación**: registra **consumo confirmado**.
    - Anulaciones antes de En preparación: liberan reserva sin impacto en inventario.
-9. **R-CMD-09**: ítem Rechazado mantiene consumo confirmado (D-10a). El reemplazo es ítem nuevo en la comanda.
-10. **R-CMD-10**: traslado de comanda preserva ítems, estados, mesero, historial e identificador. Solo cambia mesa.
-11. **R-CMD-11**: traslado sujeto a 7 reglas (D-08):
+9. **REG-21-09**: ítem Rechazado mantiene consumo confirmado (D-10a). El reemplazo es ítem nuevo en la comanda.
+10. **REG-21-10**: traslado de comanda preserva ítems, estados, mesero, historial e identificador. Solo cambia mesa.
+11. **REG-21-11**: traslado sujeto a 7 reglas (D-08):
     - destino Libre o Por limpiar
     - destino no parte de Grupo
     - si comanda vinculada a reserva: capacidad compatible o Nivel 2 para forzar
@@ -108,20 +108,20 @@ Transiciones permitidas según D-02 (matriz de anulación):
     - origen → Por limpiar o Libre según config
     - destino → Ocupada
     - log con motivo, usuarios, timestamp
-12. **R-CMD-12**: no se permite agregar ítems a comanda en estado Pendiente de cobro, Cerrada o Anulada.
-13. **R-CMD-13**: división de cuenta se confirma al momento de facturar en §23. Modificable hasta entonces sin consecuencia fiscal.
-14. **R-CMD-14**: cada cuenta de una división genera **factura SRI independiente** con receptor propio, IVA propio sobre sus ítems, propina propia. Descuentos pre-división se prorratean proporcionalmente (D-09).
-15. **R-CMD-15**: combo (D-03):
+12. **REG-21-12**: no se permite agregar ítems a comanda en estado Pendiente de cobro, Cerrada o Anulada.
+13. **REG-21-13**: división de cuenta se confirma al momento de facturar en §23. Modificable hasta entonces sin consecuencia fiscal.
+14. **REG-21-14**: cada cuenta de una división genera **factura SRI independiente** con receptor propio, IVA propio sobre sus ítems, propina propia. Descuentos pre-división se prorratean proporcionalmente (D-09).
+15. **REG-21-15**: combo (D-03):
     - al agregar un combo, sistema genera automáticamente los componentes
     - cada componente tiene su propio ruteo y estado
     - ítem padre pasa a Listo solo cuando **todos** sus componentes están Listos
     - padre → Entregado se propaga a todos los componentes
     - anulación del padre anula todos los componentes
-16. **R-CMD-16**: producto Agotado en catálogo no se puede agregar a comandas nuevas. Los ya agregados antes del agotamiento siguen su curso normal.
-17. **R-CMD-17**: concurrencia: serialización a nivel de DB. Si dos meseros intentan agregar el último ítem en stock, gana el primero que confirma. El segundo recibe rechazo de "producto agotado".
-18. **R-CMD-18**: reapertura de comanda Cerrada requiere Nivel 4 + motivo + generación de nota de crédito asociada en §24.
+16. **REG-21-16**: producto Agotado en catálogo no se puede agregar a comandas nuevas. Los ya agregados antes del agotamiento siguen su curso normal.
+17. **REG-21-17**: concurrencia: serialización a nivel de DB. Si dos meseros intentan agregar el último ítem en stock, gana el primero que confirma. El segundo recibe rechazo de "producto agotado".
+18. **REG-21-18**: reapertura de comanda Cerrada requiere Nivel 4 + motivo + generación de nota de crédito asociada en §24.
 
-## Resiliencia offline del Mesero (R-CMD-19)
+## Resiliencia offline del Mesero (R-21-19)
 
 La tablet del Mesero soporta pérdida temporal de conexión con el servidor local:
 
@@ -129,6 +129,7 @@ La tablet del Mesero soporta pérdida temporal de conexión con el servidor loca
 - Al reconectar, los cambios se reintentan automáticamente.
 - **Idempotencia garantizada**: cada operación tiene un `request_id` UUID generado en el cliente. El backend rechaza request_ids duplicados.
 - Ventana offline esperada: minutos, no horas. Si supera 15 minutos, alerta al Mesero.
+- La cola offline del Mesero aplica solo a pérdida temporal de conexión entre la tablet y el backend local. No implica operación autónoma indefinida ni reemplaza la autoridad del backend. Al reconectar, el backend valida permisos, stock, estados e idempotencia antes de aceptar cada cambio. X-Request-Id es obligatorio en todos los mutadores, porque ya está mencionado en la API esperada.
 
 ## División de cuenta (D-09)
 

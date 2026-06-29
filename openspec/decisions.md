@@ -142,7 +142,7 @@ Módulos impactados: §21.
 
 | ID | Decisión |
 |---|---|
-| T-01 | Sin dependencia cloud obligatoria. Operación crítica autocontenida en servidor local. |
+| T-01 | T-01 no prohíbe servicios locales autocontenidos como PostgreSQL, Redis o contenedores Docker. Prohíbe dependencias cloud obligatorias para la operación crítica. |
 | T-02 | WebSockets como mecanismo único de comunicación en tiempo real. |
 | T-08 | Configuración inicial del sistema vía interfaz del Admin Socio. |
 | T-15 | Backend en Python (Opción B). Razón: librería propietaria de facturación SRI escrita en Python. |
@@ -152,6 +152,7 @@ Módulos impactados: §21.
 | T-32 | Tres redes lógicas separadas: Sistema, Empleados, Clientes. |
 | T-33 | Autenticación por PIN compartido en tablet fija de cocina (Chef + Ayudante). |
 | T-34 | Re-autenticación con PIN personal cuando la acción requiere identificación individual. |
+| T-35 | Docker Compose único como entorno oficial de desarrollo. El workspace raíz debe levantar backend, frontend, PostgreSQL y Redis con un solo `docker-compose.yml`. Esta decisión reemplaza la restricción inicial de “Sin Docker en MVP” para el desarrollo de osiris-menu. |
 
 ---
 
