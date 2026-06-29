@@ -30,6 +30,7 @@ El frontend vive en el repo `osiris-menu-fe`. Las decisiones de negocio del sist
 | Cache/estado operativo liviano | Redis async | Cache, estado efímero o coordinación local. No dependencia cloud. |
 | Contenedores | Docker + Docker Compose | Un único compose raíz levanta backend, frontend, PostgreSQL y Redis. |
 
+
 No introducir librerías nuevas sin justificación explícita.
 
 ## Arquitectura física y entorno de ejecución

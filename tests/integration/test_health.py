@@ -22,7 +22,13 @@ def test_openapi_served(client: TestClient) -> None:
 
 
 def test_module_routers_mounted(client: TestClient) -> None:
-    for module in ("mesas", "comandas", "cocina-barra"):
+    # §20 implementado: /mesas devuelve la lista de mesas (no placeholder).
+    mesas = client.get("/api/v1/mesas")
+    assert mesas.status_code == 200
+    assert isinstance(mesas.json(), list)
+
+    # Módulos aún en scaffolding.
+    for module in ("comandas", "cocina-barra"):
         response = client.get(f"/api/v1/{module}")
         assert response.status_code == 200
         assert response.json()["status"] == "scaffolding"
